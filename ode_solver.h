@@ -3,8 +3,8 @@
 #ifndef ODE_SOLVER_H
 #define ODE_SOLVER_H
 
-#include"matrix.h"
-#include"lab_no.h"
+#include "matrix.h"
+#include "lab_no.h"
 
 matrix *solve_ode(double, double, double, const matrix &, matrix * = nullptr, matrix * = nullptr); // throw (char*);
 matrix diff(double, const matrix &, matrix * = nullptr, matrix * = nullptr);

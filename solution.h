@@ -3,27 +3,33 @@
 #ifndef SOLUTION_H
 #define SOLUTION_H
 
-#include"ode_solver.h"
+#include "ode_solver.h"
 
-class solution
-{
-	friend ostream &operator<<(ostream &, const solution &);
-	friend int get_dim(const solution &); // throw (char*);
+class solution {
+    friend ostream &operator<<(ostream &, const solution &);
+
+    friend int get_dim(const solution &); // throw (char*);
 public:
-	matrix x;
-	matrix y;
-	matrix g;
-	matrix H;
-	static int f_calls;
-	static int g_calls;
-	static int H_calls;
-	static void clear_calls();
-	solution(double = NAN);
-	solution(const matrix &);
-	solution(int, double *); // throw (char*);
-	void fit_fun(matrix * = nullptr, matrix * = nullptr);
-	void grad(matrix * = nullptr, matrix * = nullptr);
-	void hess(matrix * = nullptr, matrix * = nullptr);
+    matrix x;
+    matrix y;
+    matrix g;
+    matrix H;
+    static int f_calls;
+    static int g_calls;
+    static int H_calls;
+
+    static void clear_calls();
+
+    solution(double = NAN);
+
+    solution(const matrix &);
+
+    solution(int, double *); // throw (char*);
+    void fit_fun(matrix * = nullptr, matrix * = nullptr);
+
+    void grad(matrix * = nullptr, matrix * = nullptr);
+
+    void hess(matrix * = nullptr, matrix * = nullptr);
 };
 
 #endif

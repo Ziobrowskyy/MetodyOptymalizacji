@@ -3,7 +3,7 @@
 #if LAB_NO > 1
 
 double *expansion(double x0, double d, double alpha, int Nmax, matrix *ud, matrix *ad) {
-    double *p = new double[2];
+    auto *p = new double[2];
     solution X0(x0), X1(x0 + d);
     X0.fit_fun(ud, ad);
     X1.fit_fun(ud, ad);
@@ -46,8 +46,8 @@ double *expansion(double x0, double d, double alpha, int Nmax, matrix *ud, matri
 
 solution fib(double a, double b, double epsilon, matrix *ud, matrix *ad) {
     int n = static_cast<int>(
-            ceil(log2(sqrt(5)) / log2(0.5 * (1 + sqrt(5))))
-    );
+            ceil(log2(sqrt(5) * (b - a) / epsilon) / log2((1 + sqrt(5)) * 0.5))
+            );
     int *F = new int[n]{1, 1};
     for (int i = 2; i < n; ++i)
         F[i] = F[i - 1] + F[i - 2];
@@ -57,7 +57,7 @@ solution fib(double a, double b, double epsilon, matrix *ud, matrix *ad) {
     C.fit_fun(ud, ad);
     D.fit_fun(ud, ad);
     for (int i = 0; i <= n - 3; ++i) {
-        if (C.x < D.x)
+        if (C.y < D.y)
             B = D;
         else
             A = C;
@@ -65,8 +65,9 @@ solution fib(double a, double b, double epsilon, matrix *ud, matrix *ad) {
         D.x = A.x + B.x - C.x;
         C.fit_fun(ud, ad);
         D.fit_fun(ud, ad);
+
 #if LAB_NO == 2 && LAB_PART == 2
-        ???;
+        ud->add_row((B.x- A.x)());
 #endif
     }
     return C;
@@ -108,15 +109,16 @@ solution lag(double a, double b, double epsilon, double gamma, int Nmax, matrix 
             return C;
         }
 #if LAB_NO == 2 && LAB_PART == 2
-        ???
+        ud->add_row((B.x - A.x)());
 #endif
-        if (???)
-        return C;
+        if (B.x - A.x < epsilon || abs(D.x() - D_old.x()) < gamma || solution::f_calls > Nmax)
+            return C;
         D_old = D;
     }
 }
 
 #endif
+
 #if LAB_NO > 2
 solution HJ(matrix x0, double s, double alpha, double epsilon, int Nmax, matrix *ud, matrix *ad)
 {
@@ -236,6 +238,7 @@ solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, 
     }
 }
 #endif
+
 #if LAB_NO > 3
 solution pen(matrix x0, double c0, double dc, double epsilon, int Nmax, matrix *ud, matrix *ad)
 {
@@ -321,6 +324,7 @@ solution sym_NM(matrix x0, double s, double alpha, double beta, double gamma, do
     }
 }
 #endif
+
 #if LAB_NO > 4
 solution SD(matrix x0, double h0, double epsilon, int Nmax, matrix *ud, matrix *ad)
 {
@@ -464,6 +468,7 @@ solution golden(double a, double b, double epsilon, int Nmax, matrix *ud, matrix
 }
 
 #endif
+
 #if LAB_NO > 5
 solution Powell(matrix x0, double epsilon, int Nmax, matrix *ud, matrix *ad)
 {
@@ -499,6 +504,7 @@ solution Powell(matrix x0, double epsilon, int Nmax, matrix *ud, matrix *ad)
     }
 }
 #endif
+
 #if LAB_NO > 6
 solution EA(int N, matrix limits, int mi, int lambda, matrix sigma0, double epsilon, int Nmax, matrix *ud, matrix *ad)
 {
