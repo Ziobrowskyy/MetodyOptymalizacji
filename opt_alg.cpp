@@ -8,7 +8,7 @@ double *expansion(double x0, double d, double alpha, int Nmax, matrix *ud, matri
     X0.fit_fun(ud, ad);
     X1.fit_fun(ud, ad);
     if (X0.y == X1.y) {
-        p[0] = X0.x();
+        p[0] = X0.x(); // Operator () - zwraca wartosc macierzy
         p[1] = X1.x();
         return p;
     }
@@ -18,14 +18,14 @@ double *expansion(double x0, double d, double alpha, int Nmax, matrix *ud, matri
         X1.fit_fun(ud, ad);
         if (X0.y <= X1.y) {
             p[0] = X1.x();
-            p[1] = X0.x() - d;
+            p[1] = X0.x() - d; //bo d jest ujemne dlatego minus
             return p;
         }
     }
     solution X2;
     int i = 1;
     while (true) {
-        X2.x = x0 + pow(alpha, i) * d;
+        X2.x = x0 + pow(alpha, i) * d; //x0 - punkt startowy
         X2.fit_fun(ud, ad);
         if (X1.y <= X2.y || solution::f_calls > Nmax)
             break;
@@ -33,25 +33,27 @@ double *expansion(double x0, double d, double alpha, int Nmax, matrix *ud, matri
         X1 = X2;
         ++i;
     }
-//    d > 0 ? p[0] = X0.x(), p[1] = X2.x() : (p[0] = X2.x(), p[1] = X0.x());
-    if (d > 0) {
+    d > 0 ? (p[0] = X0.x(), p[1] = X2.x()) : (p[0] = X2.x(), p[1] = X0.x());
+    return p;
+}
+/*
+ *   if (d > 0) {
         p[0] = X0.x();
         p[1] = X2.x();
     } else {
         p[0] = X2.x();
         p[1] = X0.x();
     }
-    return p;
-}
-
+ */
 solution fib(double a, double b, double epsilon, matrix *ud, matrix *ad) {
     int n = static_cast<int>(
             ceil(log2(sqrt(5) * (b - a) / epsilon) / log2((1 + sqrt(5)) * 0.5))
-            );
+    );
     int *F = new int[n]{1, 1};
     for (int i = 2; i < n; ++i)
         F[i] = F[i - 1] + F[i - 2];
     solution A(a), B(b), C, D;
+    //mnozymy przez długość przedzialu
     C.x = B.x - 1.0 * F[n - 2] / F[n - 1] * (B.x - A.x);
     D.x = A.x + B.x - C.x;
     C.fit_fun(ud, ad);
@@ -75,11 +77,11 @@ solution fib(double a, double b, double epsilon, matrix *ud, matrix *ad) {
 
 solution lag(double a, double b, double epsilon, double gamma, int Nmax, matrix *ud, matrix *ad) {
     solution A(a), B(b), C(0.5 * (a + b)), D, D_old(a);
-//    C.x = 0.5 * (a + b);
     A.fit_fun(ud, ad);
     B.fit_fun(ud, ad);
     C.fit_fun(ud, ad);
     double l, m;
+
     while (true) {
         l = A.y(0) * (pow(B.x(0), 2) - pow(C.x(0), 2)) + B.y(0) * (pow(C.x(0), 2) - pow(A.x(0), 2)) +
             C.y(0) * (pow(A.x(0), 2) - pow(B.x(0), 2));
@@ -120,123 +122,202 @@ solution lag(double a, double b, double epsilon, double gamma, int Nmax, matrix 
 #endif
 
 #if LAB_NO > 2
-solution HJ(matrix x0, double s, double alpha, double epsilon, int Nmax, matrix *ud, matrix *ad)
-{
-    solution XB(???), XB_old, X;
+
+solution HJ(matrix x0, double s, double alpha, double epsilon, int Nmax, matrix *ud, matrix *ad) {
+    //xb - pnkt bazowy, old - stara baza, x
+    solution XB(x0), XB_old, X;
+    /* f: R2 => R
+     * przesuwamy sie wzdluz x1 i x2,
+     * jesli krok poprawia wartosc to ok, jest nie to w druga strone
+     * - przesuniecie w pierwszej plaszczyznie
+     * 1 < 2 (wartosc celu w p1 jest mniejsa w p1 niz w p2)
+     * jesli nie to dodajemy 3
+     * jesli w 3 < 1 - przesuwamy sie do 3
+     * - potem przesuniecie w drugiej plaszczyznie
+     * - jesli kroki sa gorsze to sie nie przesuwamy
+     * - kazdy z krokow zwraca jeden w 9 punktów otaczajacych p startowy
+     * p4    #   #
+     * p3    p1  p2
+     * p5    #   #
+    */
     XB.fit_fun(ud, ad);
-    while (true)
-    {
+    while (true) {
+
+        // etap probny moze sie sie zakonczyc zwroceniem tego samego lub lepszego punktu
+        // jesli zakoczy sie porazka to zmniejszamy dl kroku (s)
+        // musimy szukac punktu jescze blizej
+        // kryterium jest znalezienie s < epsilon - to znaczy ze wszedzie jest gorzej
+        // jesli f(xB) < f(x)
+        //jeden z tych 9 pkt otaczahjacych (8 obok lub xb startowe)
         X = HJ_trial(XB, s, ud, ad);
-        if (???)
-        {
-            while (true)
-            {
-                ???;
-                ???;
-#if LAB_NO==3 && LAB_PART==2
-                ???
+
+        if (X.y < XB.y) { //zakonczylo sie sukcesem
+            //etap roboczy
+            while (true) {
+                XB_old = XB;
+                XB = X;
+#if LAB_NO == 3 && LAB_PART == 2
+                ud->add_row(trans(XB.x));
 #endif
-                ???
+                X.x = 2 * XB.x - XB_old.x; //odbicie symetryczne
                 X.fit_fun(ud, ad);
+                //ocena nowego punktu po odbicuu przesuwamy go
                 X = HJ_trial(X, s, ud, ad);
-                if (???)
+                if (X.y >= XB.y) //nowy X jest gorszy, przerywamy etap roboczy
                     break;
-                if (???)
+//                if (s < epsilon)
+                if (solution::f_calls > Nmax)
                     return XB;
             }
-        }
-        else
-            ???;
-        if (???)
+        } else //nie zwrocilo lepszego punktu
+            s *= alpha; //zmniejszenie kroku
+        if (s < epsilon || solution::f_calls > Nmax) //sprawdz czy krok nie jest mnejszy od kroku granicznego
             return XB;
     }
 }
 
-solution HJ_trial(solution XB, double s, matrix *ud, matrix *ad)
-{
-    int n=get_dim(XB);
-    matrix D = ident_mat(n);
+// s - dlugosc kroku, ud (user data), ad (alg data) - chwoliwowo niewykorzystywane
+solution HJ_trial(solution XB, double s, matrix *ud, matrix *ad) {
+    int n = get_dim(XB); //sprawdzamy rozmiar problemu u nas 2D
+    matrix D = ident_mat(n); //macierz zawierajaca kierunki d1 = [1/0] d2 = [0/1], D = [1/0 0/1]
+    /* D:
+     * [1 0]
+     * [0 1]
+     */
     solution X;
-    for (int i = 0; i < n; ++i)
-    {
-        X.x = ???
-        X.fit_fun(ud, ad);
-        if (???)
-            ???;
-        else
-        {
-            X.x = ???
+    for (int i = 0; i < n; ++i) { //dla kazdego z kierunkow
+        X.x = XB.x + s * D[i]; //D[i] - i-ty kierunek
+        X.fit_fun(ud, ad); //wartosc funkcji celu w tym punkcie
+        if (X.y < XB.y) // jesli pkt jest lepszy to przesuwamy
+            XB = X;
+        else { // jesli nie jest lepszy to:
+            X.x = XB.x - s * D[i]; //krok w drugim kierunku
             X.fit_fun(ud, ad);
-            if (???)
-                ???;
+            if (X.y < XB.y) //znowu sprawdzawmy czy lepszy
+                XB = X;
         }
     }
     return XB;
 }
 
-solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, int Nmax, matrix *ud, matrix *ad)
-{
-    solution X(???), Xt;
-    int n = get_dim(X);
+/*
+ * bezgradientowa metoda
+ * wystepuje jedynie etap probny - nie ma odbic symetrycznych - poruszamy sie jedynie wzdluz osi
+ * zmieniamy kierunki w etapie probnym w tej metodzie w przeciwienstwie do metoty HJ
+ * f: R2 -> R - dwa kierunki x1 i x2
+ * zaczynamy od x0
+ * zaczynamy od bazy kierunkow D = [1/0 0/1]
+ * wykonujemy krok i sprawdzamy czy jest lepiej w pierwszym a potem w drugim kierunku
+ *         x2
+ *         ^    //jesli x2 lepszy od x1
+ *         |
+ * x0 ->  x1 //jesli x1 lepszy od x0
+ * jesli jest gorzej to zostajemy a nie robimy kroku w drugim kierunku
+ * s[0] = [1/1]
+ * s[1] = [2/2] // jesli obydwa kroku byly lepsze w obydwu kierunkach, zakladajac ze alpha = 2
+ * w nastepnej interacji wydluzamy dl kroku jesli jest lepiej
+ * w tej metodzie kazdy kierunke ma wlasna dl kroku, s startowe = [1/1]
+ * jesli krok jest nieudany to zmieniamy krok przemnazajac przez -beta, nie ruszajac sie
+ * s[2] = [-1/???] // s[i] = -beta * s(i), jesli beta = 0.5
+ *
+ * alg:
+ * x(i) -> x(i) + s(i) * d(i)
+ * jesli f(xi) > f(x(i) + s(i) * d(i))
+ *      x(x+1) = x(i) + s(i) * d(i) // przesuwm sie
+ *      s(i+1) = alpha * s(i) // zwiekszam dl kroku
+ *      L(i + 1 )  = L(i) + s(i) //lambda - sumaryczne przesuniecie
+ * else
+ *      x(i+1) = x(i) // nie przesuwam sie
+ *      s(i+1) = -beta * s(i) //zmniejszam dl kroku
+ *      p(i+1) = p(i) + 1 //ile razy byl nieudany krok w danym kierunku - p - licznik porazek
+ */
+// s0 - macierz dl kroku dla kazego kierunku
+// alpha/beta - zmniejszanie/zwiekszanie dl kroku
+solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, int Nmax, matrix *ud, matrix *ad) {
+    solution X(x0), Xt; //pkt startowy w x0 , xt - pkt tymaczasowy do sprawdzania nowego kroku
+    int n = get_dim(X); //wymiar problemu u nas = 2
+    // l - macierz lamba, sumaryczne przesuniecie
+    // p - wartosci (0, 1, 2, 3) - ile porazek w danym kierunku
+    // s - macierz dl krokow, poniewaz koniczne bedzie wracanie do poczatkowej dl kroku
+    // d - macierz kierunkow - poczatkowa macierz jednostrowa D = [1/0 0/1]
     matrix l(n, 1), p(n, 1), s(s0), D = ident_mat(n);
     X.fit_fun(ud, ad);
-    while (true)
-    {
-        for (int i = 0; i < ???; ++i)
-        {
-            Xt.x = ???;
+    while (true) {
+        // w kazdym kierunku
+        for (int i = 0; i < n; ++i) {
+            Xt.x = X.x + s(i) * D(1); // nowy krok do sprawdzenia [wektor + skalar * wektror]
             Xt.fit_fun(ud, ad);
-            if (???)
-            {
-                ???
-                ???
-                ???
-            }
-            else
-            {
-                ???
-                ???
+            if (Xt.y < X.y) { // pkt jest lepszy to sie przesuwamy
+                X = Xt;
+                l(i) += s(i); // dodanie do lamddy dl kroku
+                s(i) *= alpha; //zwiekszenie dl kroku
+            } else { // jesli krok jest nieudany
+                ++p(i);
+                s(i) *= -beta; //zmniejszenie dl kroku
             }
         }
-#if LAB_NO==3 && LAB_PART==2
-        ???
+#if LAB_NO == 3 && LAB_PART == 2
+        ud->add_row(trans(X.x));
 #endif
-        bool change = true;
-        for (int i = 0; i < ???; ++i)
-            if (??? || ???)
-            {
+        /*
+         * zmiana bazy kierunkow, czyli zmiana macierzy D
+         * obrot wykonujemy jesli w kazdym kierunku jest kazdym kierunku jest porazka
+         * wszyskite lambdy sa rozne od 0 - nowe kierunki generujemy z wykorzystaniem przesuniec w kazdym z kieruno
+         * kierunek nie mozem byc zerowy !!!
+         */
+        bool change = true; // czy zrobic obrot
+        for (int i = 0; i < n; ++i) {
+            if (l(i) == 0 || p(i) == 0) { // ktores sie zeruje
                 change = false;
                 break;
             }
-        if (change)
-        {
-            matrix Q(???), v(???);
-            for (int i = 0; ???; ++i)
-                for (int j = 0; ???; ++j)
-                    Q(i, j) = ???;
-            Q = ???
-            v = ???
-            D.set_col(???);
-            for (int i = 1; ???; ++i)
-            {
-                matrix temp(???);
-                for (int j = 0; ???; ++j)
-                    temp = ???
-                v = ???
-                D.set_col(???);
-            }
-            ???
-            ???
-            ???
+        }
+        /*
+         * nowe kierunki zaleza od lambd
+         * nowe kierunki sa prostopadle i wektory te musza byc znormalizowane
+         * uzywamy ortonormalizacji Grahma-Schmidta
+         * 1. wyzmaczamy macierz Q = D * [l1  0  0   0 ...   0]
+         *                               [l2  l2 0   0 ...   0]
+         *                               [l3  l3 l3  0 ...   0]
+         *                               [...                 ]
+         *                               [ln  ln ln  ln ... ln]
+         *
+         * Vj - V1 = Q[1]
+         * dj = Vj/ || Vj || // dzielimy przez norme z Vj
+         * Vj = Q[j] - E (k =1, k -1) Q[j]^T * d_k * d_k
+         */
+        if (change) {
+            matrix Q(n, n), v(n, 1); // macierz kwadratowa oraz wektor pionowy
+            for (int i = 0; i < n; ++i) //wypelniay macierz Q lambdami
+                for (int j = 0; j < n; ++j) {
+                    Q(i, j) = l(i); // ity wiersz w Q to ...
+                }
+            Q = D * Q; // mnozenie przez kierunek
+            v = Q[0] / norm(Q[0]);
+            D.set_col(v, 0); // mamy ustawony pierwszy kierunek
+            // liczymy kolejne kierunki
+            for (int i = 1; i < n; ++i) {
+                matrix temp(n, 1);
+                for (int j = 0; j < i; ++j) {
+                    temp = temp + trans(Q(j)) * D[j] * D[j];
+                }
+                v = (Q[i] - temp) / norm(Q[i] - temp);
+                D.set_col(v, i);
+            } // koniec obrotu, mamy wszystkie kierunki w macierzy D
+            s = s0;
+            l = matrix(n,1); //zerujemy lambdy
+            p = matrix(n,1); // wektory porazek rowniez
         }
         double max_s = abs(s(0));
+        //znajdz najmniejsza dl kroku, uwzgledniajac fakt ze dl kroku moga byc ujemne dlatego abs(s(i))
         for (int i = 1; i < n; ++i)
             if (max_s < abs(s(i)))
                 max_s = abs(s(i));
-        if (???)
+        if (max_s < epsilon || solution::f_calls > Nmax)
             return X;
     }
 }
+
 #endif
 
 #if LAB_NO > 3

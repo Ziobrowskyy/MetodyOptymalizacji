@@ -47,19 +47,32 @@ matrix diff(double t, const matrix &Y, matrix *ud, matrix *ad) {
     double a = 0.98, b = 0.63, g = 9.81,
             PA = 1, TA = 90, PB = 1, DB = 0.00365665,
             Fin = 0.01, Tin = 10, DA = (*ad)();
-    matrix dY(3, 1);
+    matrix dY(3, 1); // 3 rownania rozniczkowe, 2 - ilosc wody w zbiornikach, 1 - temp w zbiorniku
 
     double FAout = Y(0) > 0 ? a * b * DA * sqrt(2 * g * Y(0) / PA) : 0;
     double FBout = Y(1) > 0 ? a * b * DB * sqrt(2 * g * Y(1) / PB) : 0;
-
-    dY(0) = -FAout;
+    // zmiana wody w zbiorniku a
+    dY(0) = -FAout; // ile wody sie wylewa
+    // zminana wody w zbiorniku b
     dY(1) = FAout + Fin - FBout;
+    // zmiana temperatury w zbioniku b
     dY(2) = Fin/Y(1) * (Tin - Y(2)) + FAout/Y(1) * (TA - Y(2));
     return dY;
 
 #elif LAB_NO == 3 && LAB_PART == 3
-
-#elif LAB_NO==4 && LAB_PART==2
+    matrix dY(Y); // dY(2,1);
+    double l = 0.5, m_r = 1, m_c = 10, b = 0.5,
+            alpha_ref = 3.14, omega_ref = 0;
+    double I = m_r * l * l / 3 + m_c * l * l;
+    double k1 = (*ad)(0), k2 = (*ad)(1);
+    double M = k1 * (alpha_ref - Y(0)) + k2 * (omega_ref - Y(1));
+    // wprowadzamy alpha 1, oraz alpha 2
+    // alpha_1 = alpha
+    // alpha_2 = alpha_prim (albo omega - predkosc katowa)
+    dY(0) = Y(1);
+    dY(1) = (M - b * Y(1)) / I;
+    return dY;
+#elif LAB_NO == 4 && LAB_PART == 2
 
 #elif LAB_NO==7 && LAB_PART==2
 
