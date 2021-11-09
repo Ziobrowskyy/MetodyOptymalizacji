@@ -12,7 +12,7 @@ matrix::matrix(double L) {
 
 matrix::matrix(int nv, int mv, double L) {
     if (nv <= 0 || mv <= 0)
-        throw "Sizes of matrix must be positive integers";
+        throw std::runtime_error("Sizes of matrix must be positive integers");
     n = nv;
     m = mv;
     M = new double *[n];
@@ -25,7 +25,7 @@ matrix::matrix(int nv, int mv, double L) {
 
 matrix::matrix(int nv, double *A) {
     if (nv <= 0)
-        throw "Length of vector must be positive integer";
+        throw std::runtime_error("Length of vector must be positive integer");
     n = nv;
     m = 1;
     M = new double *[n];
@@ -37,7 +37,7 @@ matrix::matrix(int nv, double *A) {
 
 matrix::matrix(int nv, int mv, double **A) {
     if (nv <= 0 || mv <= 0)
-        throw "Sizes of matrix must be positive integers";
+        throw std::runtime_error("Sizes of matrix must be positive integers");
     n = nv;
     m = mv;
     M = new double *[n];
@@ -84,7 +84,7 @@ matrix &matrix::operator=(const matrix &A) {
 
 matrix matrix::operator[](int nv) const {
     if (nv >= m || nv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     matrix A(n, 1);
     for (int i = 0; i < n; ++i)
         A.M[i][0] = M[i][nv];
@@ -93,34 +93,34 @@ matrix matrix::operator[](int nv) const {
 
 double &matrix::operator()(int nv, int mv) {
     if (nv >= n || mv >= m || nv < 0 || mv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     return M[nv][mv];
 }
 
 double &matrix::operator()(int nv, int mv) const {
     if (nv >= n || mv >= m || nv < 0 || mv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     return M[nv][mv];
 }
 
 void matrix::set_col(const matrix &c, int mv) {
     if (mv >= m || mv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     if (n != c.n)
-        throw "Matrix dimensions must agree";
+        throw std::runtime_error("Matrix dimensions must agree");
     if (c.m != 1)
-        throw "Column can be replaced by the column vector only";
+        throw std::runtime_error("Column can be replaced by the column vector only");
     for (int i = 0; i < n; ++i)
         M[i][mv] = c(i);
 }
 
 void matrix::set_row(const matrix &c, int nv) {
     if (nv >= n || nv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     if (m != c.m)
-        throw "Matrix dimensions must agree";
+        throw std::runtime_error("Matrix dimensions must agree");
     if (c.n != 1)
-        throw "Row can be replaced by the row vector only";
+        throw std::runtime_error("Row can be replaced by the row vector only");
     for (int i = 0; i < m; ++i)
         M[nv][i] = c(0, i);
 }
@@ -168,7 +168,7 @@ matrix hcat(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != nB[0])
-        throw "Matrix dimensions must agree";
+        throw std::runtime_error("Matrix dimensions must agree");
     matrix C(nA[0], nA[1] + nB[1]);
     for (int i = 0; i < nA[0]; ++i) {
         for (int j = 0; j < nA[1]; ++j)
@@ -183,7 +183,7 @@ matrix vcat(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[1] != nB[1])
-        throw "Matrix dimensions must agree";
+        throw std::runtime_error("Matrix dimensions must agree");
     matrix C(nA[0] + nB[0], nA[1]);
     for (int i = 0; i < nA[0]; ++i)
         for (int j = 0; j < nA[1]; ++j)
@@ -197,7 +197,7 @@ matrix vcat(const matrix &A, const matrix &B) {
 matrix get_col(const matrix &A, int mv) {
     int *n = get_size(A);
     if (mv >= n[1] || mv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     matrix B(n[0], 1);
     for (int i = 0; i < n[0]; ++i)
         B(i, 0) = A(i, mv);
@@ -207,7 +207,7 @@ matrix get_col(const matrix &A, int mv) {
 matrix get_row(const matrix &A, int nv) {
     int *n = get_size(A);
     if (nv >= n[0] || nv < 0)
-        throw "Index exceeds matrix dimentions";
+        throw std::runtime_error("Index exceeds matrix dimentions");
     matrix B(1, n[1]);
     for (int j = 0; j < n[1]; ++j)
         B(0, j) = A(nv, j);
@@ -245,7 +245,7 @@ matrix operator+(const matrix &A, const matrix &B) {
                 C(i, j) += B(i, j);
         return C;
     } else
-        throw "Matrix dimensions must agree";
+        throw std::runtime_error("Matrix dimensions must agree");
 }
 
 matrix operator-(const matrix &A, const matrix &B) {
@@ -275,7 +275,7 @@ matrix operator*(const matrix &A, const matrix &B) {
                     C(i, j) += A(i, k) * B(k, j);
         return C;
     } else
-        throw "Matrix dimensions must agree";
+        throw std::runtime_error("Matrix dimensions must agree");
 }
 
 matrix operator/(const matrix &A, const matrix &B) {
@@ -286,7 +286,7 @@ bool operator<(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != 1 || nA[1] != 1 || nB[0] != 1 || nB[1] != 1)
-        throw "Relation operators are defined for scalars only";
+        throw std::runtime_error("Relation operators are defined for scalars only");
     return A() < B();
 }
 
@@ -294,7 +294,7 @@ bool operator>(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != 1 || nA[1] != 1 || nB[0] != 1 || nB[1] != 1)
-        throw "Relation operators are defined for scalars only";
+        throw std::runtime_error("Relation operators are defined for scalars only");
     return A() > B();
 }
 
@@ -302,7 +302,7 @@ bool operator<=(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != 1 || nA[1] != 1 || nB[0] != 1 || nB[1] != 1)
-        throw "Relation operators are defined for scalars only";
+        throw std::runtime_error("Relation operators are defined for scalars only");
     return A() <= B();
 }
 
@@ -310,7 +310,7 @@ bool operator>=(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != 1 || nA[1] != 1 || nB[0] != 1 || nB[1] != 1)
-        throw "Relation operators are defined for scalars only";
+        throw std::runtime_error("Relation operators are defined for scalars only");
     return A() >= B();
 }
 
@@ -318,7 +318,7 @@ bool operator==(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != 1 || nA[1] != 1 || nB[0] != 1 || nB[1] != 1)
-        throw "Relation operators are defined for scalars only";
+        throw std::runtime_error("Relation operators are defined for scalars only");
     return A() == B();
 }
 
@@ -326,7 +326,7 @@ bool operator!=(const matrix &A, const matrix &B) {
     int *nA = get_size(A);
     int *nB = get_size(B);
     if (nA[0] != 1 || nA[1] != 1 || nB[0] != 1 || nB[1] != 1)
-        throw "Relation operators are defined for scalars only";
+        throw std::runtime_error("Relation operators are defined for scalars only");
     return A() != B();
 }
 
@@ -366,7 +366,7 @@ istream &operator>>(istream &IS, matrix &A) {
             ISS >> A(i, j);
             ISS.clear();
             if (IS.eof())
-                throw "Insufficient numbers";
+                throw std::runtime_error("Insufficient numbers");
         }
     return IS;
 }
@@ -374,7 +374,7 @@ istream &operator>>(istream &IS, matrix &A) {
 double det(const matrix &A) {
     int *nA = get_size(A);
     if (nA[0] != nA[1])
-        throw "Matrix must be square";
+        throw std::runtime_error("Matrix must be square");
     double D = 0;
     if (nA[0] == 1)
         D = A();
@@ -393,7 +393,7 @@ double det(const matrix &A) {
 double norm(const matrix &A) {
     int *nA = get_size(A);
     if (nA[1] != 1)
-        throw "Norm is defined for vectors only";
+        throw std::runtime_error("Norm is defined for vectors only");
     double N = 0;
     for (int i = 0; i < nA[0]; ++i)
         N += pow(A(i), 2);
@@ -403,7 +403,7 @@ double norm(const matrix &A) {
 matrix inv(const matrix &A) {
     double D = det(A);
     if (D == 0)
-        throw "The determinant of the martix is zero";
+        throw std::runtime_error("The determinant of the martix is zero");
     int *nA = get_size(A);
     matrix I(nA[0], nA[0]);
     if (nA[0] == 1)
@@ -455,6 +455,6 @@ int *get_size(const matrix &A) {
 
 int get_len(const matrix &A) {
     if (A.m != 1)
-        throw "Length can be returned for column vector only (use get_size instead).";
+        throw std::runtime_error("Length can be returned for column vector only (use get_size instead).");
     return A.n;
 }

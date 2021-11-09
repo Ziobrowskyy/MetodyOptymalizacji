@@ -36,6 +36,7 @@ double *expansion(double x0, double d, double alpha, int Nmax, matrix *ud, matri
     d > 0 ? (p[0] = X0.x(), p[1] = X2.x()) : (p[0] = X2.x(), p[1] = X0.x());
     return p;
 }
+
 /*
  *   if (d > 0) {
         p[0] = X0.x();
@@ -188,9 +189,9 @@ solution HJ_trial(solution XB, double s, matrix *ud, matrix *ad) {
     for (int i = 0; i < n; ++i) { //dla kazdego z kierunkow
         X.x = XB.x + s * D[i]; //D[i] - i-ty kierunek
         X.fit_fun(ud, ad); //wartosc funkcji celu w tym punkcie
-        if (X.y < XB.y) // jesli pkt jest lepszy to przesuwamy
+        if (X.y < XB.y) { // jesli pkt jest lepszy to przesuwamy
             XB = X;
-        else { // jesli nie jest lepszy to:
+        } else { // jesli nie jest lepszy to:
             X.x = XB.x - s * D[i]; //krok w drugim kierunku
             X.fit_fun(ud, ad);
             if (X.y < XB.y) //znowu sprawdzawmy czy lepszy
@@ -233,6 +234,8 @@ solution HJ_trial(solution XB, double s, matrix *ud, matrix *ad) {
  */
 // s0 - macierz dl kroku dla kazego kierunku
 // alpha/beta - zmniejszanie/zwiekszanie dl kroku
+#if 1
+
 solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, int Nmax, matrix *ud, matrix *ad) {
     solution X(x0), Xt; //pkt startowy w x0 , xt - pkt tymaczasowy do sprawdzania nowego kroku
     int n = get_dim(X); //wymiar problemu u nas = 2
@@ -245,7 +248,7 @@ solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, 
     while (true) {
         // w kazdym kierunku
         for (int i = 0; i < n; ++i) {
-            Xt.x = X.x + s(i) * D(1); // nowy krok do sprawdzenia [wektor + skalar * wektror]
+            Xt.x = X.x + s(i) * D[i]; // nowy krok do sprawdzenia [wektor + skalar * wektror]
             Xt.fit_fun(ud, ad);
             if (Xt.y < X.y) { // pkt jest lepszy to sie przesuwamy
                 X = Xt;
@@ -289,7 +292,7 @@ solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, 
         if (change) {
             matrix Q(n, n), v(n, 1); // macierz kwadratowa oraz wektor pionowy
             for (int i = 0; i < n; ++i) //wypelniay macierz Q lambdami
-                for (int j = 0; j < n; ++j) {
+                for (int j = 0; j <= i; ++j) {
                     Q(i, j) = l(i); // ity wiersz w Q to ...
                 }
             Q = D * Q; // mnozenie przez kierunek
@@ -299,14 +302,14 @@ solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, 
             for (int i = 1; i < n; ++i) {
                 matrix temp(n, 1);
                 for (int j = 0; j < i; ++j) {
-                    temp = temp + trans(Q(j)) * D[j] * D[j];
+                    temp = temp + trans(Q[i]) * D[j] * D[j];
                 }
                 v = (Q[i] - temp) / norm(Q[i] - temp);
                 D.set_col(v, i);
             } // koniec obrotu, mamy wszystkie kierunki w macierzy D
             s = s0;
-            l = matrix(n,1); //zerujemy lambdy
-            p = matrix(n,1); // wektory porazek rowniez
+            l = matrix(n, 1); //zerujemy lambdy
+            p = matrix(n, 1); // wektory porazek rowniez
         }
         double max_s = abs(s(0));
         //znajdz najmniejsza dl kroku, uwzgledniajac fakt ze dl kroku moga byc ujemne dlatego abs(s(i))
@@ -318,92 +321,234 @@ solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, 
     }
 }
 
+#else
+solution Rosen(matrix x0, matrix s0, double alpha, double beta, double epsilon, int Nmax, matrix *ud, matrix *ad)
+{
+    // Xt - tymczasowy
+    solution X(x0), Xt;
+
+    // wymiar problemu
+    int n = get_dim(X);
+
+    // l - macierz lambda (sumaryczne przesuniecie dla kazdego pierunku), p - wektor porazek dla kazdego kierunku,
+    // s - macierz dlugosci kroku (kazdy kierunek ma swoja), D - kierunki (poczatkowo zgodne z osiami)
+    matrix l(n, 1), p(n, 1), s(s0), D = ident_mat(n);
+    X.fit_fun(ud, ad);
+    while (true)
+    {
+        // dla kazdego kierunku
+        for (int i = 0; i < n; ++i)
+        {
+            // s(i) - liczba, D[i] - kolumna
+            Xt.x = X.x + s(i) * D[i];
+
+            // liczmy wartosc f celu
+            Xt.fit_fun(ud, ad);
+
+            // punkt Xt jest lepszy
+            if (Xt.y < X.y)
+            {
+
+                // przesuwamy sie
+                X = Xt;
+
+                // przesuwamy sie o s, lambda - suma dlugosci przesuniec -> zwiekszamy ja o s(i)
+                l(i) += s(i);
+
+                // zwiekszamy dlugosc kroku
+                s(i) *= alpha;
+            }
+
+                // krok nieudany
+            else
+            {
+                // zwiekszamy licznik porazek
+                ++p(i);
+                // zmniejszamy krok i zmieniamy kierunek
+                s(i) *= -beta;
+            }
+        }
+#if LAB_NO==3 && LAB_PART==2
+        (*ud).add_row(trans(X.x));
+#endif
+        // zmiany kierunkow
+        // obrot wykonujemy gdy w kazdym kierunku jest przesuniecie i w kazdym kierunku jest porazka
+        // p(i) > 0 i l(i) > 0
+        bool change = true;
+        for (int i = 0; i < n; ++i)
+            if (l(i) == 0 || p(i) == 0)
+            {
+                change = false;
+                break;
+            }
+
+        // wykonujemy obrot
+        if (change)
+        {
+            // elementy sa wyzerowane
+            matrix Q(n,n), v(n,1);
+
+            // wypleniamy macierz q lambdami
+            for (int i = 0; i<n; ++i)
+                for (int j = 0; j<=i; ++j)
+                    Q(i, j) = l(i);
+
+            // teraz q jest macierza trojkatna
+
+            // wyznaczamy nowe Q na podstawie starych kierunkow
+            Q = D * Q;
+
+            // pierwszy kierunek
+            v = Q[1] / norm(Q[0]);
+
+            // wstawiamy nowa kolumne -> pierwszy kierunek zostal zmieniony
+            D.set_col(v,0);
+
+            // kazdy kolejny kierunek wyznczamy tu w petli
+            for (int i = 1; i<n; ++i)
+            {
+                // elementy wyzerowane
+                matrix temp(n,1);
+
+                for (int j = 0; j < i; ++j)
+                    temp = temp + trans(Q[i]) * D[j] * D[j];
+
+                // normalizacja
+                v = (Q[i] - temp) / norm(Q[i] - temp);
+
+                // wstawiamy nowy kierunek
+                D.set_col(v,i);
+            }
+            // poczatkowa dlugosc kroku
+            s = s0;
+            // zerujemy lambdy
+            l = matrix(n, 1);
+            // zerujemy porazki
+            p = matrix(n, 1);
+        }
+
+        // szukamy modulu najdluzeszego kroku (bo dlugosc kroku moze byc ujemna)
+        double max_s = abs(s(0));
+        for (int i = 1; i < n; ++i)
+            if (max_s < abs(s(i)))
+                max_s = abs(s(i));
+        if (max_s < epsilon || solution::f_calls > Nmax)
+            return X;
+    }
+}
+#endif
 #endif
 
 #if LAB_NO > 3
-solution pen(matrix x0, double c0, double dc, double epsilon, int Nmax, matrix *ud, matrix *ad)
-{
+/*
+ * f(x) = ...
+ * F_i = f(x) + c_i + S(x) - S - funkcja kary
+ *
+ * c_i+1 = dc * c_i - dc > 1 - kara zew, dc < 1 - kara wew
+ *
+ * dla dc > 1 - kara zew
+ *  s(x) = Suma od i = 1, do 3 =  max(0, g_i(x))^2 - zawsze wieksze od 0
+ *  dla dc < 1 - kara wew
+ *  s(x) = - suma od 1 do 3,  = 1 / g_i
+ */
+// c0 - pocz wartosc c, sily dary, dc - zmiana  kary, reszta standard
+solution pen(matrix x0, double c0, double dc, double epsilon, int Nmax, matrix *ud, matrix *ad) {
     double alpha = 1, beta = 0.5, gamma = 2, delta = 0.5, s = 0.5;
-    solution X(???), X1;
-    matrix c(2, new double[2]{ c0,dc });
-    while (true)
-    {
+    solution X(x0), X1;
+    //dane przekazywane do funkcji, aby wiedziala ktora funkcje kary wybrac
+    matrix c(2, new double[2]{c0, dc});
+    while (true) {
         X1 = sym_NM(X.x, s, alpha, beta, gamma, delta, epsilon, Nmax, ud, &c);
-        if (???)
+        //punkt sie nie zmienia
+        if (norm(X.x - X1.x) < epsilon || solution::f_calls > Nmax)
             return X1;
-        ???
-        ???
+        //zmiana wspolczynnika c
+        c(0) *= dc;
+        //podmiana punktu
+        X = X1;
     }
 }
 
-solution sym_NM(matrix x0, double s, double alpha, double beta, double gamma, double delta, double epsilon, int Nmax, matrix *ud, matrix *ad)
-{
-    int n = get_len(x0);
+solution
+sym_NM(matrix x0, double s, double alpha, double beta, double gamma, double delta, double epsilon, int Nmax, matrix *ud,
+       matrix *ad) {
+    // sympleks ma n+1 wierzcholkow gdzie n to wymiar problemu - u nas 2d -> trojkat
+    int n = get_len(x0); //rozmiar problemu
+    // wektory w macierzy d - kierunki poruszania sie po osi
     matrix D = ident_mat(n);
     int N = n + 1;
+    // nasz sympleks
     solution *S = new solution[N];
-    S[0].x = ???;
+    S[0].x = x0;
     S[0].fit_fun(ud, ad);
-    for (int i = 1; i < N; ++i)
-    {
-        S[i].x = ???
+    for (int i = 1; i < N; ++i) {
+        S[i].x = S[0].x + s * D[i - 1];
         S[i].fit_fun(ud, ad);
     }
+    //ropzwiazania r - reflecnted, e - ekspansja , n - zawezone
     solution PR, PE, PN;
+    // punkt ciezkosci
     matrix pc;
     int i_min, i_max;
-    while (true)
-    {
+    while (true) {
+        // zerowanie indeksow wierzcholkow
         i_min = i_max = 0;
-        for (int i = 1; i < N; ++i)
-        {
-            if (???)
+        for (int i = 1; i < N; ++i) {
+            if (S[i_min].y < S[i].y)
                 i_min = i;
-            if (???)
+            if (S[i_max].y > S[i].y)
                 i_max = i;
         }
-        pc = matrix(???);
+        // liczumy srodek ciezkoci przez srednia figuyr
+        pc = matrix(n, 1);
         for (int i = 0; i < N; ++i)
-            if (???)
-                ???
-        pc = pc / (???);
-        PR.x = ???
+            if (i != i_max)
+                pc = pc + S[i].x;
+        pc = pc / (N - 1);
+        // odbicie
+        PR.x = pc + alpha * (pc - S[i_max].x);
+        // ocena punktu odbitego
         PR.fit_fun(ud, ad);
-        if (???)
-            S[i_max] = ???
-        else if (???)
-        {
-            PE.x = ???
-            PE.fit_fun(ud, ad);
-            if (???)
-                S[i_max] = ???
-            else
-                S[i_max] = ???
+        //warunek akceptacji odbicia
+        if (S[i_min].y <= PR.y && PR.y < S[i_max].y) {
+            S[i_max] = PR;
         }
-        else
-        {
-            PN.x = ???
-            PN.fit_fun(ud, ad);
-            if (???)
-                S[i_max] = ???
+            // kiedy robimly ekspansje
+        else if (PR.y < S[i_min].y) {
+            PE.x = pc + gamma * (PR.x - pc);
+            PE.fit_fun(ud, ad);
+            if (PR.y <= PE.y)
+//            if (PE.y < PR.y)
+                S[i_max] = PR;
             else
-            {
+                S[i_max] = PE;
+        } else {
+            //zawezenie
+            PN.x = pc + beta * (S[i_max].x - pc);
+            PN.fit_fun(ud, ad);
+            // warunek akceptacji zawezenia
+            if (PN.y < S[i_max].y)
+                S[i_max] = PN;
+            else {
+                // robimy redukcje, ktora polega na przysuniecu wszystkich wierzcholko do wierzchoka
+                // najlepszego
                 for (int i = 0; i < N; ++i)
-                    if (???)
-                    {
-                        S[i].x = ???
+                    if (i != i_min) { // wszystkie oprocz najlepszego
+                        S[i].x = delta * (S[i].x + S[i_min].x);
                         S[i].fit_fun(ud, ad);
                     }
             }
         }
-        double max_s = ???
+        // sprawdzanie warunku stopu
+        double max_s = norm(S[0].x - S[i_min].x); // odlegl pomiedzy wierz zerowym a minumalnym
         for (int i = 1; i < N; ++i)
-            if (max_s < ???)
-                max_s = ???
-        if (???)
+            if (max_s < norm(S[i].x - S[i_min].x))
+                max_s = norm(S[i].x - S[i_min].x);
+        if (max_s < epsilon || solution::f_calls > Nmax)
             return S[i_min];
     }
 }
+
 #endif
 
 #if LAB_NO > 4

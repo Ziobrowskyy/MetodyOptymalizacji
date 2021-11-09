@@ -81,27 +81,42 @@ void solution::fit_fun(matrix *ud, matrix *ad) {
 #elif LAB_NO == 3 && (LAB_PART == 1 || LAB_PART == 2)
     y = pow(x(0), 2) + pow(x(1), 2) - cos(2.5 * M_PI * x(0)) - cos(2.5 * M_PI * x(1)) + 2;
 #elif LAB_NO == 3 && LAB_PART == 3
-//    matrix X0 = matrix(2, new double[2]{0,0});
-    matrix Y0(2, 1); //alpha  = 0, omega = 0
-    matrix *Y = solve_ode(0, 0.1, 100, Y0, ud, &x);
+    //    matrix X0 = matrix(2, new double[2]{0,0});
+        matrix Y0(2, 1); //alpha  = 0, omega = 0
+        matrix *Y = solve_ode(0, 0.1, 100, Y0, ud, &x);
 
-    // Y[0] - wektor czasu, Y[1] - rozwiazanie z dwoma kolumnami - alpha oraz omega
-    int n = get_len(Y[0]); //dlugosc wektora czasu
-    12
+        // Y[0] - wektor czasu, Y[1] - rozwiazanie z dwoma kolumnami - alpha oraz omega
+        int n = get_len(Y[0]); //dlugosc wektora czasu
+        12
 
-    double a_ref = 3.14, o_ref = 0;
-    y = 0;
-    for (int i = 0; i < n; i++) {
-        //x0 - k1, x1 = k2
-        y = y + 10 * pow(a_ref - Y[1](i, 0), 2) +
-            pow(o_ref - Y[1](i, 1), 2) +
-            pow(x(0) * (a_ref - Y[1](i, 0)) + x(1) * (o_ref - Y[1](i, 1)), 2);
-    }
-    y = y * 0.1;
+        double a_ref = 3.14, o_ref = 0;
+        y = 0;
+        for (int i = 0; i < n; i++) {
+            //x0 - k1, x1 = k2
+            y = y + 10 * pow(a_ref - Y[1](i, 0), 2) +
+                pow(o_ref - Y[1](i, 1), 2) +
+                pow(x(0) * (a_ref - Y[1](i, 0)) + x(1) * (o_ref - Y[1](i, 1)), 2);
+        }
+        y = y * 0.1;
 
 #elif LAB_NO == 4 && LAB_PART == 1
-
-#elif LAB_NO==4 && LAB_PART==2
+    double arg = M_PI * sqrt(pow((x(0) / M_PI), 2) + pow((x(1) / M_PI), 2));
+    y = sin(arg) / arg;
+    if (ad != nullptr)
+        if ((*ad)(1) > 1) { // zew
+            // czy ogarniczenie jest naruszone
+            if (-x(0) + 1 > 0) { // ogr 1
+                y = y + (*ad)(0) * pow(-x(0) + 1, 2);
+            }
+            if (-x(1) + 1 > 0) { // ogr 2
+                y = y + (*ad)(0) * pow(-x(1) + 1, 2);
+            }
+            if (sqrt(pow(x(0), 2) + pow(x(1), 2)) - (*ud)(0) > 0) { // ogr 3
+                y = y + (*ad)(0) * pow(sqrt(pow(x(0), 2) + pow(x(1), 2)) - (*ud)(0), 2);
+            }
+        }
+//    y = x(0)*x(0);
+#elif LAB_NO == 4 && LAB_PART == 2
 
 #elif LAB_NO==5 && (LAB_PART==1 || LAB_PART==2)
 
